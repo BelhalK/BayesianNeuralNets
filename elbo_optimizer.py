@@ -16,7 +16,7 @@ except Exception as e:
   raise ImportError("{0}. Your TensorFlow version is not supported.".format(e))
 
 
-class testkl(VariationalInference):
+class test(VariationalInference):
   """Variational inference with the KL divergence
   $\\text{KL}( q(z; \lambda) \| p(z \mid x) ).$
   This class minimizes the objective by automatically selecting from a
@@ -68,7 +68,7 @@ class testkl(VariationalInference):
         latent_vars = latent_vars_dict
         del latent_vars_dict
 
-    super(KLqp, self).__init__(latent_vars, data)
+    super(test, self).__init__(latent_vars, data)
 
   def initialize(self, n_samples=1, kl_scaling=None, *args, **kwargs):
     """Initialize inference algorithm. It initializes hyperparameters
@@ -94,7 +94,7 @@ class testkl(VariationalInference):
 
     self.n_samples = n_samples
     self.kl_scaling = kl_scaling
-    return super(KLqp, self).initialize(*args, **kwargs)
+    return super(test, self).initialize(*args, **kwargs)
 
   def build_loss_and_gradients(self, var_list):
     """Wrapper for the `KLqp` loss function.
@@ -160,6 +160,7 @@ class ReparameterizationKLqp(VariationalInference):
         standard normal draws. The random variables to approximate
         must be continuous.
     """
+    
     if isinstance(latent_vars, list):
       with tf.variable_scope(None, default_name="posterior"):
         latent_vars_dict = {}

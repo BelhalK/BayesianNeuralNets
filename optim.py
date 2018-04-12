@@ -151,6 +151,7 @@ def build_reparam_kl_loss_and_gradients(inference, var_list):
   Computed by sampling from $q(z;\lambda)$ and evaluating the
   expectation using Monte Carlo sampling.
   """
+ 
   p_log_lik = [0.0] * inference.n_samples
   base_scope = tf.get_default_graph().unique_name("inference") + '/'
   for s in range(inference.n_samples):

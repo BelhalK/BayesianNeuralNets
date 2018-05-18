@@ -96,51 +96,8 @@ class test(VariationalInference):
     self.kl_scaling = kl_scaling
     return super(test, self).initialize(*args, **kwargs)
 
-  def build_loss_and_gradients(self, var_list):
-    """Wrapper for the `KLqp` loss function.
-    $-\\text{ELBO} =
-        -\mathbb{E}_{q(z; \lambda)} [ \log p(x, z) - \log q(z; \lambda) ]$
-    KLqp supports
-    1. score function gradients [@paisley2012variational]
-    2. reparameterization gradients [@kingma2014auto]
-    of the loss function.
-    If the KL divergence between the variational model and the prior
-    is tractable, then the loss function can be written as
-    $-\mathbb{E}_{q(z; \lambda)}[\log p(x \mid z)] +
-        \\text{KL}( q(z; \lambda) \| p(z) ),$
-    where the KL term is computed analytically [@kingma2014auto]. We
-    compute this automatically when $p(z)$ and $q(z; \lambda)$ are
-    Normal.
-    """
-    is_reparameterizable = all([
-        rv.reparameterization_type ==
-        tf.contrib.distributions.FULLY_REPARAMETERIZED
-        for rv in six.itervalues(self.latent_vars)])
-    is_analytic_kl = all([isinstance(z, Normal) and isinstance(qz, Normal)
-                          for z, qz in six.iteritems(self.latent_vars)])
-    if not is_analytic_kl and self.kl_scaling:
-      raise TypeError("kl_scaling must be None when using non-analytic KL term")
-    if is_reparameterizable:
-      if is_analytic_kl:
-        return build_reparam_kl_loss_and_gradients(self, var_list)
-      # elif is_analytic_entropy:
-      #    return build_reparam_entropy_loss_and_gradients(self, var_list)
-      else:
-        return build_reparam_loss_and_gradients(self, var_list)
-    else:
-      # Prefer Rao-Blackwellization over analytic KL. Unknown what
-      # would happen stability-wise if the two are combined.
-      # if is_analytic_kl:
-      #   return build_score_kl_loss_and_gradients(self, var_list)
-      # Analytic entropies may lead to problems around
-      # convergence; for now it is deactivated.
-      # elif is_analytic_entropy:
-      #    return build_score_entropy_loss_and_gradients(self, var_list)
-      # else:
-      return build_score_rb_loss_and_gradients(self, var_list)
 
-
-def build_reparam_kl_loss_and_gradients(inference, var_list):
+def build_loss_and_gradients(inference, var_list):
   """Build loss function. Its automatic differentiation
   is a stochastic gradient of
   .. math::
@@ -196,61 +153,4 @@ def build_reparam_kl_loss_and_gradients(inference, var_list):
   return loss, grads_and_vars
 
 
-# def build_reparam_kl_loss_and_gradients(inference, var_list):
-#   """Build loss function. Its automatic differentiation
-#   is a stochastic gradient of
-#   .. math::
-#     -\\text{ELBO} =  - ( \mathbb{E}_{q(z; \lambda)} [ \log p(x \mid z) ]
-#           + \\text{KL}(q(z; \lambda) \| p(z)) )
-#   based on the reparameterization trick [@kingma2014auto].
-#   It assumes the KL is analytic.
-#   Computed by sampling from $q(z;\lambda)$ and evaluating the
-#   expectation using Monte Carlo sampling.
-#   """
- 
-#   p_log_lik = [0.0] * inference.n_samples
-#   base_scope = tf.get_default_graph().unique_name("inference") + '/'
-#   for s in range(inference.n_samples):
-#     # Form dictionary in order to replace conditioning on prior or
-#     # observed variable with conditioning on a specific value.
-#     scope = base_scope + tf.get_default_graph().unique_name("sample")
-#     dict_swap = {}
-#     for x, qx in six.iteritems(inference.data):
-#       if isinstance(x, RandomVariable):
-#         if isinstance(qx, RandomVariable):
-#           qx_copy = copy(qx, scope=scope)
-#           dict_swap[x] = qx_copy.value()
-#         else:
-#           dict_swap[x] = qx
-
-#     for z, qz in six.iteritems(inference.latent_vars):
-#       # Copy q(z) to obtain new set of posterior samples.
-#       qz_copy = copy(qz, scope=scope)
-#       dict_swap[z] = qz_copy.value()
-
-#     for x in six.iterkeys(inference.data):
-#       if isinstance(x, RandomVariable):
-#         x_copy = copy(x, dict_swap, scope=scope)
-#         p_log_lik[s] += tf.reduce_sum(
-#             inference.scale.get(x, 1.0) * x_copy.log_prob(dict_swap[x]))
-
-#   p_log_lik = tf.reduce_mean(p_log_lik)
-
-#   kl_penalty = tf.reduce_sum([
-#       tf.reduce_sum(inference.kl_scaling.get(z, 1.0) * kl_divergence(qz, z))
-#       for z, qz in six.iteritems(inference.latent_vars)])
-
-#   reg_penalty = tf.reduce_sum(tf.losses.get_regularization_losses())
-
-#   if inference.logging:
-#     tf.summary.scalar("loss/p_log_lik", p_log_lik,
-#                       collections=[inference._summary_key])
-#     tf.summary.scalar("loss/kl_penalty", kl_penalty,
-#                       collections=[inference._summary_key])
-#     tf.summary.scalar("loss/reg_penalty", reg_penalty,
-#                       collections=[inference._summary_key])
-
-#   loss = -(p_log_lik - kl_penalty - reg_penalty)
-#   grads = tf.gradients(loss, var_list)
-#   grads_and_vars = list(zip(grads, var_list))
-#   return loss, grads_and_vars
+  

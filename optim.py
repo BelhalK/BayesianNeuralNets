@@ -16,7 +16,7 @@ except Exception as e:
   raise ImportError("{0}. Your TensorFlow version is not supported.".format(e))
 
 
-class test(VariationalInference):
+class elbo_optimizer(VariationalInference):
   """Variational inference with the KL divergence
   $\\text{KL}( q(z; \lambda) \| p(z \mid x) ).$
   This class minimizes the objective by automatically selecting from a
@@ -70,7 +70,7 @@ class test(VariationalInference):
 
     super(test, self).__init__(latent_vars, data)
 
-  def initialize(self, n_samples=1, kl_scaling=None, *args, **kwargs):
+  def initialize(self, n_samples=100, kl_scaling=None, *args, **kwargs):
     """Initialize inference algorithm. It initializes hyperparameters
     and builds ops for the algorithm's computation graph.
     Args:
